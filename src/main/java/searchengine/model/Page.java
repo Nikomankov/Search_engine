@@ -22,4 +22,14 @@ public class Page {
     private Integer code;
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
+
+    @Override
+    public String toString(){
+        return new StringBuilder("\nPage")
+                .append("\nID --- ").append(id)
+                .append("\nPath - ").append(path)
+                .append("\nCode - ").append(code)
+                .append("\nSite - ").append(site)
+                .toString();
+    }
 }
