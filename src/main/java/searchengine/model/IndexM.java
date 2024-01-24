@@ -11,36 +11,39 @@ import org.hibernate.annotations.DynamicUpdate;
 @Builder
 @DynamicUpdate
 @Entity
-public class Lemma {
+@Table(name = "`index`")
+public class IndexM {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(nullable = false)
     private int id;
 
-    @ManyToOne(cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
-    @JoinColumn(name = "site_id", nullable = false)
-    private Site site;
+    @ManyToOne(cascade = CascadeType.REMOVE)
+    @JoinColumn(name = "page_id", nullable = false)
+    private Page page;
 
-    @Column(columnDefinition = "varchar(255)", nullable = false)
-    private String lemma;
+    @ManyToOne(cascade = CascadeType.REMOVE)
+    @JoinColumn(name = "lemma_id", nullable = false)
+    private Lemma lemma;
 
-    @Column(nullable = false)
-    private int frequency;
+    @Column(name = "`rank`", columnDefinition = "float", nullable = false)
+    private float rank;
 
     @Tolerate
-    Lemma(){}
+    IndexM(){}
 
     @Override
     public boolean equals(Object obj){
-        Lemma lemma = (Lemma) obj;
-        return (lemma.getLemma().equals(this.lemma) && lemma.site.equals(this.site));
+        IndexM index = (IndexM) obj;
+        return (index.getPage().equals(this.page) && index.getLemma().equals(this.lemma));
     }
 
     @Override
     public int hashCode(){
         int total = 31;
         total = total * 31 + id;
-        total = total * 31 + (site == null ? 0 : site.hashCode());
+        total = total * 31 + (page == null ? 0 : page.hashCode());
         total = total * 31 + (lemma == null ? 0 : lemma.hashCode());
         return total;
     }
@@ -49,9 +52,9 @@ public class Lemma {
     public String toString(){
         return new StringBuilder("\nLemma")
                 .append("\n\tID --- ").append(id)
-                .append("\n\tSite - ").append(site.getId())
+                .append("\n\tPage - ").append(page.getPath())
                 .append("\n\tLemma - ").append(lemma)
-                .append("\n\tFrequency - ").append(frequency)
+                .append("\n\tRank - ").append(rank)
                 .toString();
     }
 }
