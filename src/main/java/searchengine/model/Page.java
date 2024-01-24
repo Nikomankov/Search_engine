@@ -1,26 +1,32 @@
 package searchengine.model;
 
+import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Data;
-
-import javax.persistence.*;
-import javax.persistence.Index;
+import org.hibernate.annotations.DynamicUpdate;
 
 @Data
+@Builder
+@DynamicUpdate
 @Entity
-@Table(name = "page", indexes = {@Index(columnList = "path", unique = true)})
+@Table(name="page", indexes = {@Index(name = "index_page", columnList = "`path`")})
 public class Page {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false)
-    private Integer id;
-    @ManyToOne
-    @JoinColumn(name = "site_id", referencedColumnName = "id", nullable = false)
+    private int id;
+
+    @ManyToOne(cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
+    @JoinColumn(name = "site_id", nullable = false)
     private Site site;
-    @Column(columnDefinition = "TEXT", nullable = false)
+
+    @Column(name = "`path`", columnDefinition = "varchar(250)", nullable = false)
     private String path;
-    @Column(nullable = false)
-    private Integer code;
-    @Column(columnDefinition = "TEXT", nullable = false)
+
+    @Column(name = "`code`", nullable = false)
+    private int code;
+
+    @Column(name = "content", columnDefinition = "mediumtext", nullable = false)
     private String content;
 
     @Override

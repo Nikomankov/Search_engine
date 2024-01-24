@@ -1,40 +1,47 @@
 package searchengine.model;
 
+import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Data;
+import org.hibernate.annotations.DynamicUpdate;
 
-import javax.persistence.*;
 import java.util.Date;
 
 @Data
-@Entity
 @Builder
+@DynamicUpdate
+@Entity
 public class Site {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(nullable = false)
-    private Integer id;
+    private int id;
+
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "enum('INDEXING', 'INDEXED', 'FAILED')")
+    @Column(name = "`status`", columnDefinition = "enum('INDEXING', 'INDEXED', 'FAILED')")
     private IndexingStatus status;
-    @Column(columnDefinition = "DATETIME", nullable = false)
-    private Date status_time;
-    @Column(columnDefinition = "TEXT")
-    private String last_error;
-    @Column(columnDefinition = "VARCHAR(255)", nullable = false)
+
+    @Column(name = "status_time", columnDefinition = "datetime", nullable = false)
+    private Date statusTime;
+
+    @Column(name = "last_error", columnDefinition = "text")
+    private String lastError;
+
+    @Column(name = "`url`", columnDefinition = "varchar(255)", nullable = false)
     private String url;
-    @Column(columnDefinition = "VARCHAR(255)", nullable = false)
+
+    @Column(name = "`name`", columnDefinition = "varchar(255)", nullable = false)
     private String name;
 
     @Override
     public String toString(){
         return new StringBuilder("\nSite ")
                 .append(name != null        ? "\n  Name -------- " + name : "")
-                .append(id != null          ? "\n  ID ---------- " + id : "")
+                .append("\n  ID ---------- " + id)
                 .append(url != null         ? "\n  URL --------- " + url : "")
                 .append(status != null      ? "\n  Status ------ " + status : "")
-                .append(status_time != null ? "\n  Time -------- " + status_time : "")
-                .append(last_error != null  ? "\n  Last error: - " + last_error : "")
+                .append(statusTime != null ? "\n  Time -------- " + statusTime : "")
+                .append(lastError != null  ? "\n  Last error: - " + lastError : "")
                 .toString();
     }
 }

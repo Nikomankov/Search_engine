@@ -1,22 +1,28 @@
 package searchengine.model;
 
+import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Data;
+import org.hibernate.annotations.DynamicUpdate;
 
-import javax.persistence.*;
 
 @Data
+@Builder
+@DynamicUpdate
 @Entity
-@Table(name = "lemma")
 public class Lemma {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(nullable = false)
-    private Integer id;
-    @OneToOne
-    @JoinColumn(name = "site_id", referencedColumnName = "id", nullable = false)
+    private int id;
+
+    @ManyToOne(cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
+    @JoinColumn(name = "site_id", nullable = false)
     private Site site;
-    @Column(columnDefinition = "VARCHAR(255)", nullable = false)
+
+    @Column(columnDefinition = "varchar(255)", nullable = false)
     private String lemma;
+
     @Column(nullable = false)
-    private Integer frequency;
+    private int frequency;
 }

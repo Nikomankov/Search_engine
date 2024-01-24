@@ -3,6 +3,7 @@ spring:
     url: jdbc:mysql://localhost:3306/search_engine
     username: root
     password: M_VySQL372355
+    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     properties:
       hibernate:
