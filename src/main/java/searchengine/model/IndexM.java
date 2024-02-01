@@ -31,7 +31,7 @@ public class IndexM {
     private float rank;
 
     @Tolerate
-    IndexM(){}
+    public IndexM(){}
 
     @Override
     public boolean equals(Object obj){

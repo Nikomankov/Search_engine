@@ -7,16 +7,22 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import searchengine.model.Page;
 import searchengine.model.Site;
 
-import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface SiteRepository extends JpaRepository<Site, Integer> {
-    Optional<Site> findByUrl(String url);
+public interface PageRepository extends JpaRepository<Page,Integer> {
+    Optional<Page> findByPath(String path);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT s FROM Site s WHERE s.id = :id")
-    Optional<Site> findAndLock(@Param("id") int id);
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("SELECT p FROM Page p WHERE p.`path` = :pth")
+    Optional<Page> findByPathAndLock(@Param("pth") String path);
+
+    @Modifying
+    @Query("DELETE FROM Page p WHERE p.`site` = :site_id")
+    void deleteBySite(@Param("site_id") Site site);
+
 }

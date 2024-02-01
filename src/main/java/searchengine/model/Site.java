@@ -5,7 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.Tolerate;
 import org.hibernate.annotations.DynamicUpdate;
+import org.springframework.format.annotation.DateTimeFormat;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 @Data
@@ -13,6 +15,8 @@ import java.util.Date;
 @DynamicUpdate
 @Entity
 public class Site {
+
+    private static SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,7 +39,7 @@ public class Site {
     private String name;
 
     @Tolerate
-    Site(){}
+    public Site(){}
 
     @Override
     public boolean equals(Object obj){
@@ -58,7 +62,7 @@ public class Site {
                 .append("\n\tID ---------- " + id)
                 .append(url != null         ? "\n\tURL --------- " + url : "")
                 .append(status != null      ? "\n\tStatus ------ " + status : "")
-                .append(statusTime != null ? "\n\tTime -------- " + statusTime : "")
+                .append(statusTime != null ? "\n\tTime -------- " + format.format(statusTime) : "")
                 .append(lastError != null  ? "\n\tLast error: - " + lastError : "")
                 .toString();
     }

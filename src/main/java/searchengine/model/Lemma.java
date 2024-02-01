@@ -28,7 +28,7 @@ public class Lemma {
     private int frequency;
 
     @Tolerate
-    Lemma(){}
+    public Lemma(){}
 
     @Override
     public boolean equals(Object obj){

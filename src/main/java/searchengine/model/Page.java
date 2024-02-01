@@ -1,9 +1,11 @@
 package searchengine.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.Tolerate;
+import org.hibernate.annotations.Cascade;
 import org.hibernate.annotations.DynamicUpdate;
 
 @Data
@@ -17,7 +19,8 @@ public class Page {
     @Column(nullable = false)
     private int id;
 
-    @ManyToOne(cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.DETACH)
     @JoinColumn(name = "site_id", nullable = false)
     private Site site;
 
@@ -31,7 +34,7 @@ public class Page {
     private String content;
 
     @Tolerate
-    Page(){}
+    public Page(){}
 
     @Override
     public boolean equals(Object obj){
@@ -54,7 +57,7 @@ public class Page {
                 .append("\n\tID --- ").append(id)
                 .append("\n\tPath - ").append(path)
                 .append("\n\tCode - ").append(code)
-                .append("\n\tSite - ").append(site)
+                .append("\n\tSite - ").append(site.getName())
                 .toString();
     }
 }
