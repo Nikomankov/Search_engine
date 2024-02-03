@@ -17,7 +17,7 @@ import java.util.Optional;
 public interface PageRepository extends JpaRepository<Page,Integer> {
     Optional<Page> findByPath(String path);
 
-    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Page p WHERE p.`path` = :pth")
     Optional<Page> findByPathAndLock(@Param("pth") String path);
 

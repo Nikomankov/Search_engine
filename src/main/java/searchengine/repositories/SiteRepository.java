@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import searchengine.model.Site;
 
-import java.util.Date;
+import java.sql.Date;
 import java.util.Optional;
 
 @Repository
@@ -18,5 +18,9 @@ public interface SiteRepository extends JpaRepository<Site, Integer> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM Site s WHERE s.id = :id")
-    Optional<Site> findAndLock(@Param("id") int id);
+    Optional<Site> findByIdAndLock(@Param("id") int id);
+
+    @Modifying
+    @Query(value = "UPDATE Site s SET s.status_time = ?2 WHERE s.id = ?1", nativeQuery = true)
+    void updateDate(int id, Date date);
 }

@@ -1,11 +1,13 @@
 package searchengine.services;
 
+import lombok.SneakyThrows;
 import searchengine.config.SiteConf;
 import searchengine.model.IndexingStatus;
 import searchengine.model.Site;
-import searchengine.repositories.SiteRepository;
 
 import java.util.*;
+import java.sql.Date;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
 
@@ -13,21 +15,20 @@ public class SiteParse implements Runnable {
 
     private SortedSet<String> linksSet;
     private SiteConf siteConf;
-    private SiteRepository siteRepository;
     private ForkJoinPool pool;
     private TransactionsService transactionsService;
     private Site site;
 
 
-    public SiteParse(SiteConf site, SiteRepository siteRepository, ForkJoinPool pool, TransactionsService transactionsService){
+    public SiteParse(SiteConf site, ForkJoinPool pool, TransactionsService transactionsService){
         linksSet = Collections.synchronizedSortedSet(new TreeSet<>());
         this.siteConf = site;
-        this.siteRepository = siteRepository;
         this.pool = pool;
         this.transactionsService = transactionsService;
     }
 
     //обходить все страницы, начиная с главной, добавлять их адреса, статусы и содержимое в базу данных в таблицу page;
+    @SneakyThrows
     public void run(){
         Long start = System.currentTimeMillis();
         clearUrl();
@@ -37,26 +38,23 @@ public class SiteParse implements Runnable {
                 .name(siteConf.getName())
                 .url(siteConf.getUrl())
                 .status(IndexingStatus.INDEXING)
-                .statusTime(new Date()).build();
+                .statusTime(new Date(System.currentTimeMillis())).build();
 
-        int id = siteRepository.save(site).getId();
+        int id = transactionsService.saveSite(site).getId();
         site.setId(id);
 
         System.out.println("Thread: " + Thread.currentThread() + site.toString());
 
-        PageTask task = new PageTask(site.getUrl(), site, transactionsService, linksSet);
+        Site cloneSite = (Site) site.clone();
+        PageTask task = new PageTask(cloneSite.getUrl(), cloneSite, transactionsService, linksSet);
         pool.submit(task).join();
 
-        long end = System.currentTimeMillis()-start;
-        log(end);
+//        long end = System.currentTimeMillis()-start;
+//        log(end);
 
-        site.setStatusTime(new Date());
-        site.setStatus(IndexingStatus.INDEXED);
-        siteRepository.save(site);
-
-        //по завершении обхода изменять статус (поле status) на INDEXED;
-        //если произошла ошибка и обход завершить не удалось, изменять статус на FAILED и вносить в поле last_error понятную информацию о произошедшей ошибке.
-        //this block under the question. Try to intercept end of indexation site
+//        site.setStatusTime(new Date(System.currentTimeMillis()));
+//        site.setStatus(IndexingStatus.INDEXED);
+//        transactionsService.saveSite(site);
     }
 
     private void clearUrl(){

@@ -14,12 +14,13 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinTask;
+import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.RecursiveTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class PageTask extends RecursiveTask<Boolean> {
+public class PageTask extends RecursiveAction {
 
-    private static final Logger logger = LogManager.getLogger("parserTaskLogger");
+//    private static final Logger logger = LogManager.getLogger("AsyncLogger");
 
     private static String userAgent;
     private static String referrer;
@@ -43,18 +44,18 @@ public class PageTask extends RecursiveTask<Boolean> {
     }
 
     @Override
-    protected Boolean compute() {
+    protected void compute() {
 
         Page page = transactionsService.findPage(url);
 
         //Check in DB
         if(page != null){
-           return false;
+           return;
         }
         Document pageDoc;
         boolean connected = false;
         Connection connection = Jsoup.connect(url)
-                .timeout(20000)
+                .timeout(0)
                 .userAgent(userAgent)
                 .referrer(referrer)
                 .ignoreHttpErrors(true)
@@ -79,23 +80,25 @@ public class PageTask extends RecursiveTask<Boolean> {
             if(statusCode > 399){
                 parent.setLastError(statusCode + " " + statusMessage);
             }
-            parent.setStatusTime(new Date());
-            if(!transactionsService.updatePage(page, parent)){
+//            parent.setStatusTime(new Date());
+            if(!transactionsService.updatePage(page, parent.getId()) &&
+                    transactionsService.updateSite(parent)){
                 errorMessage = "Transaction failed";
-                return false;
+                return;
             }
 
 //            transactionsService.updateSite(parent);
         } catch (RuntimeException | IOException e) {
             errorMessage = e.getMessage();
             e.printStackTrace();
-            return false;
+            return;
         } finally {
 
         }
 
 
         findLinks(pageDoc);
+//        logConnectionInfo(page,statusMessage);
 
 //        List<CompletableFuture<Boolean>> futures = tasks.stream()
 //                .map(task -> CompletableFuture.supplyAsync(task::compute))
@@ -111,7 +114,6 @@ public class PageTask extends RecursiveTask<Boolean> {
 //        System.out.println("Task time is " + new Date() + "\nSite status: " + transactionsService.getSiteStatus(parent));
 //        return allTasksResult.join();
         tasks.forEach(ForkJoinTask::fork);
-        return true;
     }
 
     public void findLinks(Document pageDoc){
@@ -152,27 +154,27 @@ public class PageTask extends RecursiveTask<Boolean> {
     }
 
 
-    public void logConnectionInfo(Page page, String statusMessage){
-        int code = page.getCode();
-        StringBuilder builder = new StringBuilder()
-                .append("\n\tThread: ").append(Thread.currentThread().getName())
-                .append("\n\tPage: ").append(page.getId())
-                .append("\n\tPath: ").append(page.getPath())
-                .append("\n\tCode: ").append(page.getCode())
-                .append("\n\tStatus message: ").append(statusMessage)
-                .append(errorMessage != null ? ("\n\tError: " + errorMessage) : "");
-
-        if(code > 399){
-            if(code < 500){
-                builder.insert(0,"\nCLIENT ERROR");
-            } else {
-                builder.insert(0,"\nSERVER ERROR");
-            }
-            logger.error(builder);
-        } else {
-            logger.info(builder);
-        }
-    }
+//    public void logConnectionInfo(Page page, String statusMessage){
+//        int code = page.getCode();
+//        StringBuilder builder = new StringBuilder()
+//                .append("\n\tThread: ").append(Thread.currentThread().getName())
+//                .append("\n\tPage: ").append(page.getId())
+//                .append("\n\tPath: ").append(page.getPath())
+//                .append("\n\tCode: ").append(page.getCode())
+//                .append("\n\tStatus message: ").append(statusMessage)
+//                .append(errorMessage != null ? ("\n\tError: " + errorMessage) : "");
+//
+//        if(code > 399){
+//            if(code < 500){
+//                builder.insert(0,"\nCLIENT ERROR");
+//            } else {
+//                builder.insert(0,"\nSERVER ERROR");
+//            }
+//            logger.error(builder);
+//        } else {
+//            logger.info(builder);
+//        }
+//    }
 
     public static void setJsoupConf(String userAgent, String referrer){
         PageTask.userAgent = userAgent;

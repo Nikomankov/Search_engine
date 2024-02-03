@@ -3,43 +3,57 @@ package searchengine.model;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.experimental.Tolerate;
 import org.hibernate.annotations.DynamicUpdate;
-import org.springframework.format.annotation.DateTimeFormat;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.sql.Date;
 
 @Data
 @Builder
 @DynamicUpdate
 @Entity
-public class Site {
+public class Site implements Cloneable{
 
     private static SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
 
+    @Getter
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
+    @Getter
     @Enumerated(EnumType.STRING)
     @Column(name = "`status`", columnDefinition = "enum('INDEXING', 'INDEXED', 'FAILED')")
     private IndexingStatus status;
 
+
+    @Setter
+    @Getter
     @Column(name = "status_time", columnDefinition = "datetime", nullable = false)
     private Date statusTime;
 
+    @Getter
     @Column(name = "last_error", columnDefinition = "text")
     private String lastError;
 
+    @Getter
     @Column(name = "`url`", columnDefinition = "varchar(255)", nullable = false)
     private String url;
 
+    @Getter
     @Column(name = "`name`", columnDefinition = "varchar(255)", nullable = false)
     private String name;
 
     @Tolerate
     public Site(){}
+
+    @Override
+    public Object clone() throws CloneNotSupportedException{
+        return super.clone();
+    }
 
     @Override
     public boolean equals(Object obj){

@@ -48,7 +48,7 @@ public class IndexServiceImpl implements IndexService{
 
         for(SiteConf s : sitesFromConfig.getSites()){
             System.out.println(s.getName() + ",  " + s.getUrl());
-            new SiteParse(s, siteRepository, pool, transactionsService).run();
+            new SiteParse(s, pool, transactionsService).run();
         }
 //        List<Future<Boolean>> futures = new ArrayList<>(sitesFromConfig.getSites().size());
 //        Boolean result = true;
@@ -73,16 +73,21 @@ public class IndexServiceImpl implements IndexService{
     public IndexResponse stop() {
         List<Site> sites = siteRepository.findAll();
 
-        boolean indexing = sites.stream().map(s -> s.getStatus()).allMatch(s -> s==IndexingStatus.INDEXED || s==IndexingStatus.FAILED);
-        if(indexing) {
+        if(!isIndexing(sites)) {
             return new IndexResponse(false);
         }
 
         pool.shutdownNow();
-        System.out.println("Shutdown running");
-        while (!pool.isShutdown()){
-            System.out.println("wait");
+        while (pool.isTerminating()){
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("Wait");
         }
+        System.out.println("Shutdown running");
+
         sites = siteRepository.findAll();
         for (Site site : sites){
             if(site.getStatus() == IndexingStatus.INDEXING) {
@@ -98,6 +103,8 @@ public class IndexServiceImpl implements IndexService{
     public IndexResponse indexPage(String url) {
         return null;
     }
+
+
 
     private boolean isIndexing(List<Site> sites){
         return sites.stream().anyMatch(s -> s.getStatus() == IndexingStatus.INDEXING);
