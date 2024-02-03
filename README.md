@@ -32,6 +32,7 @@ converted to basic form. For example, for nouns - nominative case, singular.</li
 
 <h3>Data base structure</h3>
 
+![database](https://github.com/Nikomankov/searchengine/blob/master/readme_assets/database.png)
 
 <h3>Stages of application operation</h3>
 
