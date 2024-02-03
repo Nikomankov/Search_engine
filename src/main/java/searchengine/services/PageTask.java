@@ -4,34 +4,23 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Value;
 import searchengine.model.Page;
 import searchengine.model.Site;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
-import java.util.concurrent.RecursiveTask;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class PageTask extends RecursiveAction {
-
-//    private static final Logger logger = LogManager.getLogger("AsyncLogger");
 
     private static String userAgent;
     private static String referrer;
 
     private SortedSet<String> globalLinks;
-    private String url;
-    private Site parent;
+    private final String url;
+    private final Site parent;
     private TransactionsService transactionsService;
-
-    private TreeSet<String> localLinks;
-    private String errorMessage = null;
     private List<PageTask> tasks;
 
     public PageTask(String url, Site parent, TransactionsService transactionsService, SortedSet<String> linksSet){
@@ -39,29 +28,27 @@ public class PageTask extends RecursiveAction {
         this.transactionsService = transactionsService;
         this.globalLinks = linksSet;
         this.url = url;
-        localLinks = new TreeSet<>();
         tasks = new ArrayList<>();
     }
 
     @Override
     protected void compute() {
+        String onlyPath = url.replace(parent.getUrl(), "");
 
-        Page page = transactionsService.findPage(url);
+        Page page = transactionsService.findPage(onlyPath);
+        String errorMessage = null;
 
         //Check in DB
         if(page != null){
            return;
         }
         Document pageDoc;
-        boolean connected = false;
         Connection connection = Jsoup.connect(url)
                 .timeout(0)
                 .userAgent(userAgent)
                 .referrer(referrer)
                 .ignoreHttpErrors(true)
                 .ignoreContentType(true);
-//                    .followRedirects(false);
-
 
         String statusMessage = "";
 
@@ -72,7 +59,7 @@ public class PageTask extends RecursiveAction {
 
             page = Page.builder()
                     .site(parent)
-                    .path(url)
+                    .path(onlyPath)
                     .code(statusCode)
                     .build();
             page.setContent(pageDoc.toString());
@@ -80,20 +67,16 @@ public class PageTask extends RecursiveAction {
             if(statusCode > 399){
                 parent.setLastError(statusCode + " " + statusMessage);
             }
-//            parent.setStatusTime(new Date());
             if(!transactionsService.updatePage(page, parent.getId()) &&
                     transactionsService.updateSite(parent)){
                 errorMessage = "Transaction failed";
                 return;
             }
 
-//            transactionsService.updateSite(parent);
         } catch (RuntimeException | IOException e) {
             errorMessage = e.getMessage();
             e.printStackTrace();
             return;
-        } finally {
-
         }
 
 

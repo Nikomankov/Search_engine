@@ -8,16 +8,14 @@ import searchengine.model.Site;
 import java.util.*;
 import java.sql.Date;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
 
 public class SiteParse implements Runnable {
 
     private SortedSet<String> linksSet;
-    private SiteConf siteConf;
-    private ForkJoinPool pool;
+    private final SiteConf siteConf;
+    private final ForkJoinPool pool;
     private TransactionsService transactionsService;
-    private Site site;
 
 
     public SiteParse(SiteConf site, ForkJoinPool pool, TransactionsService transactionsService){
@@ -34,7 +32,7 @@ public class SiteParse implements Runnable {
         clearUrl();
         transactionsService.deleteSiteByUrl(siteConf.getUrl());
 
-        this.site = Site.builder()
+        Site site = Site.builder()
                 .name(siteConf.getName())
                 .url(siteConf.getUrl())
                 .status(IndexingStatus.INDEXING)
