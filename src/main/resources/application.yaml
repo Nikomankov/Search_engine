@@ -15,16 +15,16 @@ spring:
 
 indexing-settings:
   sites:
-#    - url: https://www.wclass-krsk.ru/
-#      name: WorldClass Krasnoyarsk
-#    - url: https://worldclass-ekb.ru/
-#      name: WorldClass Ekaterinburg
-#    - url: https://www.lenta.ru
-#      name: Лента.ру
+    - url: https://www.wclass-krsk.ru/
+      name: WorldClass Krasnoyarsk
+    - url: https://worldclass-ekb.ru/
+      name: WorldClass Ekaterinburg
+    - url: https://www.lenta.ru
+      name: Лента.ру
     - url: https://www.skillbox.ru
       name: Skillbox
-#    - url: https://www.playback.ru
-#      name: PlayBack.Ru
+    - url: https://www.playback.ru
+      name: PlayBack.Ru
 jsoup-connection:
   user-agent: Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6
   referrer: http://www.google.com

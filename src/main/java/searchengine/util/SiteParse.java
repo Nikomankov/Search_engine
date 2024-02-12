@@ -1,9 +1,10 @@
-package searchengine.services;
+package searchengine.util;
 
 import lombok.SneakyThrows;
 import searchengine.config.SiteConf;
 import searchengine.model.IndexingStatus;
 import searchengine.model.Site;
+import searchengine.services.TransactionsService;
 
 import java.util.*;
 import java.sql.Date;

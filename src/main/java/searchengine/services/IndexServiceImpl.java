@@ -2,27 +2,19 @@ package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import searchengine.config.JsoupConnectionConf;
 import searchengine.config.SiteConf;
 import searchengine.config.SitesList;
 import searchengine.dto.index.IndexResponse;
-import searchengine.exceptions.IndexingAlreadyRunningException;
-import searchengine.exceptions.IndexingIsNotRunningException;
 import searchengine.model.IndexingStatus;
 import searchengine.model.Site;
-import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
+import searchengine.util.PageTask;
+import searchengine.util.SiteParse;
 
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.Future;
 
 @Service
 @RequiredArgsConstructor
@@ -112,6 +104,8 @@ public class IndexServiceImpl implements IndexService{
 
     private void setStartingConfig(){
         PageTask.setJsoupConf(conf.getUserAgent(), conf.getReferrer());
-        pool = new ForkJoinPool();
+        if(pool.isShutdown()){
+            pool = new ForkJoinPool();
+        }
     }
 }

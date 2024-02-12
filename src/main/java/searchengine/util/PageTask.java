@@ -1,4 +1,4 @@
-package searchengine.services;
+package searchengine.util;
 
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -6,6 +6,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import searchengine.model.Page;
 import searchengine.model.Site;
+import searchengine.services.TransactionsService;
 
 import java.io.IOException;
 import java.util.*;
@@ -63,6 +64,8 @@ public class PageTask extends RecursiveAction {
                     .code(statusCode)
                     .build();
             page.setContent(pageDoc.toString());
+
+            Lemmatization.compute(pageDoc);
 
             if(statusCode > 399){
                 parent.setLastError(statusCode + " " + statusMessage);
