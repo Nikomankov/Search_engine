@@ -30,6 +30,15 @@ converted to basic form. For example, for nouns - nominative case, singular.</li
 <h2>&#x1F50D; In details</h2>
 <div style="font-size:20px">
 
+<h3>App structure</h3>
+
+![database](https://github.com/Nikomankov/Search_engine/blob/master/readme_assets/AppScheme.jpg)
+
+
+<h4>Diagram of interaction of classes inside the application</h4>
+
+![database](https://github.com/Nikomankov/Search_engine/blob/master/readme_assets/DetailScheme.jpg)
+
 <h3>Data base structure</h3>
 
 ![database](https://github.com/Nikomankov/Search_engine/blob/master/readme_assets/database.png)
@@ -120,7 +129,8 @@ calculation).</li>
 
 [Telegram](https://t.me/Nikomankov)
 
-[Email](kislobaa@gmail.com)
-
 [LeetCode](https://leetcode.com/nikomankov/)
+
+kislobaa@gmail.com
+
 </div>
