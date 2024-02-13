@@ -70,7 +70,7 @@ public class PageTask extends RecursiveAction {
             if(statusCode > 399){
                 parent.setLastError(statusCode + " " + statusMessage);
             }
-            if(!transactionsService.updatePage(page, parent.getId()) &&
+            if(!transactionsService.updateOrSavePage(page, parent.getId()) &&
                     transactionsService.updateSite(parent)){
                 errorMessage = "Transaction failed";
                 return;

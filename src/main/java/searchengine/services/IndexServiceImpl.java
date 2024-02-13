@@ -19,8 +19,7 @@ import java.util.concurrent.ForkJoinPool;
 @Service
 @RequiredArgsConstructor
 public class IndexServiceImpl implements IndexService{
-    @Autowired
-    private SiteRepository siteRepository;
+
     @Autowired
     private ForkJoinPool pool;
     @Autowired
@@ -31,7 +30,7 @@ public class IndexServiceImpl implements IndexService{
     @Override
     public IndexResponse start() {
 
-        List<Site> sites = siteRepository.findAll();
+        List<Site> sites = transactionsService.findAllSites();
         if(isIndexing(sites)){
             return new IndexResponse(false,"Индексация уже запущена");
         }
@@ -63,7 +62,7 @@ public class IndexServiceImpl implements IndexService{
 
     @Override
     public IndexResponse stop() {
-        List<Site> sites = siteRepository.findAll();
+        List<Site> sites = transactionsService.findAllSites();
 
         if(!isIndexing(sites)) {
             return new IndexResponse(false);
@@ -80,14 +79,14 @@ public class IndexServiceImpl implements IndexService{
         }
         System.out.println("Shutdown running");
 
-        sites = siteRepository.findAll();
+        sites = transactionsService.findAllSites();
         for (Site site : sites){
             if(site.getStatus() == IndexingStatus.INDEXING) {
                 site.setStatus(IndexingStatus.FAILED);
                 site.setLastError("Принудительное завершение пользователем");
             }
         }
-        siteRepository.saveAll(sites);
+        transactionsService.saveAllSites(sites);
         return new IndexResponse(true);
     }
 

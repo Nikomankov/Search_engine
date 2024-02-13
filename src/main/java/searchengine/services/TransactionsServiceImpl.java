@@ -13,6 +13,7 @@ import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Optional;
 import java.sql.Date;
 import java.util.concurrent.ForkJoinPool;
@@ -30,27 +31,12 @@ public class TransactionsServiceImpl implements TransactionsService{
     @Autowired
     private EntityManager entityManager;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    @Override
-    public Page savePage(Page page) {
-        return pageRepository.save(page);
-    }
-
 
     @Override
     public Site saveSite(Site site) {
         return siteRepository.save(site);
     }
 
-    @Override
-    public Site findSite(String url) {
-        Site site = null;
-        Optional<Site> optionalSite =  siteRepository.findByUrl(url);
-        if(optionalSite.isPresent()){
-            site = optionalSite.get();
-        }
-        return site;
-    }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Override
@@ -66,7 +52,7 @@ public class TransactionsServiceImpl implements TransactionsService{
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, timeout = 10, rollbackFor = SQLException.class, noRollbackFor = AssertionError.class)
     @Override
-    public boolean updatePage(Page page, int siteId) {
+    public boolean updateOrSavePage(Page page, int siteId) {
         int retries = 0;
         while (retries < 5){
             try{
@@ -99,47 +85,16 @@ public class TransactionsServiceImpl implements TransactionsService{
     }
 
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW, timeout = 5, rollbackFor = SQLException.class)
-    public boolean updatePageWithLock(Page page) {
-        int retries = 0;
-        while (retries < 5){
-            try{
-                retries++;
-                Optional<Page> optionalPage = pageRepository.findByPathAndLock(page.getPath());
-                if(!optionalPage.isPresent()){
-                    page.setId(pageRepository.save(page).getId());
-                    return true;
-                }
-            } catch(CannotAcquireLockException e){
-                StringBuilder builder = new StringBuilder();
-                builder.append(page).append("\n").append(e.getMessage());
-                System.out.println(builder);
-            }
-        }
-        entityManager.clear();
-        return false;
+    @Override
+    public List<Site> findAllSites() {
+        return siteRepository.findAll();
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW, timeout = 5, rollbackFor = SQLException.class)
     @Override
-    public boolean updateSiteWithLock(Site site) {
-        int retries = 0;
-        while (retries < 5){
-            try{
-                retries++;
-                Optional<Site> optionalSite = siteRepository.findByIdAndLock(site.getId());
-                if(!optionalSite.isPresent()){
-                    siteRepository.save(site);
-                    return true;
-                }
-            } catch(CannotAcquireLockException e){
-                StringBuilder builder = new StringBuilder();
-                builder.append(site).append("\n").append(e.getMessage());
-                System.out.println(builder);
-            }
-        }
-        return false;
+    public List<Site> saveAllSites(Iterable<Site> sites) {
+        return siteRepository.saveAll(sites);
     }
+
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.REPEATABLE_READ)
     @Override
