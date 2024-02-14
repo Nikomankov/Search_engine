@@ -9,59 +9,93 @@ import org.jsoup.nodes.Document;
 import java.io.IOException;
 import java.util.*;
 
-public class Lemmatization {
+public class Lemmatizator {
 
     /*
     TODO:
         - think about how to make morph.info files loaded once when compiling the program
         - own tags remover which added space between tags text
+        - add log undefined words to file undefinedWords.log like
+            "Time: 00:00:00
+             Thread: thread name
+             Site: site name
+             Page: https://www.site.com/some/path
+             Undefined words: first word, second word, third word ...
+             "
+        - add log with lemmatization progress to file lemmatizationProgress.log like
+            "Time: 00:00:00
+             Thread: thread name
+             Site: site name
+             Page: https://www.site.com/some/path
+             Lemmas sum: 105
+             Aux part of speech sum: 15
+             Undefined words sum: 3
+             "
      */
 
-    private enum Language {RU, ENG}
     private static final String[] ruAuxPartOfSpeech = new String[]{"ПРЕДЛ", "СОЮЗ", "ЧАСТ", "МЕЖД"};
     private static final String[] engAuxPartOfSpeech = new String[]{"CONJ", "PREP", "ARTICLE", "INT", "PART"};
 
-    public static Map<String, Integer> compute(Document pageDoc) throws IOException {
+    private LuceneMorphology engLuceneMorphology;
+    private LuceneMorphology ruLuceneMorphology;
+    private List<String> engWords;
+    private List<String> ruWords;
+    private List<String> undefinedWords;
+
+
+
+
+    public Lemmatizator(LanguagesOfLuceneMorphology languages){
+        engLuceneMorphology = languages.getLuceneMorphology(Language.ENG);
+        ruLuceneMorphology = languages.getLuceneMorphology(Language.RU);
+        engWords = new ArrayList<>();
+        ruWords = new ArrayList<>();
+        undefinedWords = new ArrayList<>();
+    }
+
+    public Map<String, Integer> compute(Document pageDoc){
         Map<String, Integer> result;
         String text = removeTags(pageDoc);
         String[] words = split(text);
-        
-        List<String> engWords = new ArrayList<>();
-        List<String> ruWords = new ArrayList<>();
-        for(String w : words){
-            if(w.matches("[a-zA-Z]+")){
-                engWords.add(w);
-            } else {
-                ruWords.add(w);
-            }
-        }
 
-        result = removeAuxPartsOfSpeech(engWords, Language.ENG);
-        result.putAll(removeAuxPartsOfSpeech(ruWords, Language.RU));
-        return result;
-    }
-
-    public static Map<String, Integer> test(String text) throws IOException {
-        Map<String, Integer> result;
-        String[] words = split(text);
-        List<String> engWords = new ArrayList<>();
-        List<String> ruWords = new ArrayList<>();
         for(String w : words){
             if(w.matches("[a-zA-Z]+")){
                 engWords.add(w);
             } else if(w.matches("[а-яА-ЯёЁ]+")){
                 ruWords.add(w);
+            } else {
+                undefinedWords.add(w);
+            }
+        }
+
+        result = removeAuxPartsOfSpeech(engWords, Language.ENG);
+        result.putAll(removeAuxPartsOfSpeech(ruWords, Language.RU));
+        return result;
+    }
+
+    public Map<String, Integer> test(String text) {
+        Map<String, Integer> result;
+        String[] words = split(text);
+
+        for(String w : words){
+            if(w.matches("[a-zA-Z]+")){
+                engWords.add(w);
+            } else if(w.matches("[а-яА-ЯёЁ]+")){
+                ruWords.add(w);
+            } else {
+                undefinedWords.add(w);
             }
         }
         result = removeAuxPartsOfSpeech(engWords, Language.ENG);
         result.putAll(removeAuxPartsOfSpeech(ruWords, Language.RU));
         return result;
     }
-    private static String removeTags(Document pageDoc){
+
+    private String removeTags(Document pageDoc){
         return (pageDoc.title() + " " + pageDoc.body().text());
     }
 
-    private static String[] split(String text){
+    private String[] split(String text){
         text = text.replaceAll("[^a-zA-Zа-яА-ЯёЁ\\s]"," ")
                     .replaceAll("[\\s]+"," ")
                     .toLowerCase();
@@ -69,18 +103,18 @@ public class Lemmatization {
         return text.split(" ");
     }
 
-    private static Map<String, Integer> removeAuxPartsOfSpeech(List<String> words, Language language) throws IOException {
+    private Map<String, Integer> removeAuxPartsOfSpeech(List<String> words, Language language){
         Map<String, Integer> result = new HashMap<>(words.size());
         LuceneMorphology luceneMorphology = null;
         String[] auxPartsOfSpeech = null;
 
         switch (language){
             case RU -> {
-                luceneMorphology = new RussianLuceneMorphology();
+                luceneMorphology = ruLuceneMorphology;
                 auxPartsOfSpeech = ruAuxPartOfSpeech;
             }
             case ENG -> {
-                luceneMorphology = new EnglishLuceneMorphology();
+                luceneMorphology = engLuceneMorphology;
                 auxPartsOfSpeech = engAuxPartOfSpeech;
             }
         }
@@ -88,7 +122,6 @@ public class Lemmatization {
 
         for(String w : words){
             try{
-                System.out.println(w);
 
                 List<String> morphInfo = luceneMorphology.getMorphInfo(w);
                 if(isAuxPartOfSpeech(morphInfo, auxPartsOfSpeech)){
@@ -106,14 +139,11 @@ public class Lemmatization {
             } catch (WrongCharaterException e){
                 System.out.println(e.getMessage());
             }
-
-
         }
-
         return result;
     }
 
-    private static boolean isAuxPartOfSpeech(List<String> morphInfo, String[] auxPartOfSpeech){
+    private boolean isAuxPartOfSpeech(List<String> morphInfo, String[] auxPartOfSpeech){
         for(String w : morphInfo){
             for(String p : auxPartOfSpeech){
                 if(w.contains(p)){

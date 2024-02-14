@@ -4,8 +4,11 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import searchengine.model.IndexM;
+import searchengine.model.Lemma;
 import searchengine.model.Page;
 import searchengine.model.Site;
+import searchengine.services.LemmaService;
 import searchengine.services.TransactionsService;
 
 import java.io.IOException;
@@ -23,13 +26,21 @@ public class PageTask extends RecursiveAction {
     private final Site parent;
     private TransactionsService transactionsService;
     private List<PageTask> tasks;
+    private LemmaService lemmaService;
 
-    public PageTask(String url, Site parent, TransactionsService transactionsService, SortedSet<String> linksSet){
+
+    /*
+    TODO:
+        -think about how to reduce the number of parameters passed to the class
+     */
+
+    public PageTask(String url, Site parent, TransactionsService transactionsService, SortedSet<String> linksSet, LemmaService lemmaService){
         this.parent= parent;
         this.transactionsService = transactionsService;
         this.globalLinks = linksSet;
         this.url = url;
         tasks = new ArrayList<>();
+        this.lemmaService = lemmaService;
     }
 
     @Override
@@ -65,7 +76,7 @@ public class PageTask extends RecursiveAction {
                     .build();
             page.setContent(pageDoc.toString());
 
-            Lemmatization.compute(pageDoc);
+            lemmaService.compute(pageDoc, page);
 
             if(statusCode > 399){
                 parent.setLastError(statusCode + " " + statusMessage);
@@ -135,7 +146,7 @@ public class PageTask extends RecursiveAction {
         }
         if(link.matches("^" + parent.getUrl() + ".*$")){ //find url
             globalLinks.add(link);
-            tasks.add(new PageTask(link, parent, transactionsService, globalLinks));
+            tasks.add(new PageTask(link, parent, transactionsService, globalLinks, lemmaService));
         }
     }
 

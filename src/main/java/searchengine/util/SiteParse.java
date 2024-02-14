@@ -4,6 +4,7 @@ import lombok.SneakyThrows;
 import searchengine.config.SiteConf;
 import searchengine.model.IndexingStatus;
 import searchengine.model.Site;
+import searchengine.services.LemmaService;
 import searchengine.services.TransactionsService;
 
 import java.util.*;
@@ -17,13 +18,15 @@ public class SiteParse implements Runnable {
     private final SiteConf siteConf;
     private final ForkJoinPool pool;
     private TransactionsService transactionsService;
+    private LemmaService lemmaService;
 
 
-    public SiteParse(SiteConf site, ForkJoinPool pool, TransactionsService transactionsService){
+    public SiteParse(SiteConf site, ForkJoinPool pool, TransactionsService transactionsService, LemmaService lemmaService){
         linksSet = Collections.synchronizedSortedSet(new TreeSet<>());
         this.siteConf = site;
         this.pool = pool;
         this.transactionsService = transactionsService;
+        this.lemmaService = lemmaService;
     }
 
     //обходить все страницы, начиная с главной, добавлять их адреса, статусы и содержимое в базу данных в таблицу page;
@@ -45,7 +48,7 @@ public class SiteParse implements Runnable {
         System.out.println("Thread: " + Thread.currentThread() + site.toString());
 
         Site cloneSite = (Site) site.clone();
-        PageTask task = new PageTask(cloneSite.getUrl(), cloneSite, transactionsService, linksSet);
+        PageTask task = new PageTask(cloneSite.getUrl(), cloneSite, transactionsService, linksSet, lemmaService);
         pool.submit(task).join();
 
 //        long end = System.currentTimeMillis()-start;

@@ -10,6 +10,7 @@ import searchengine.dto.index.IndexResponse;
 import searchengine.model.IndexingStatus;
 import searchengine.model.Site;
 import searchengine.repositories.SiteRepository;
+import searchengine.util.LanguagesOfLuceneMorphology;
 import searchengine.util.PageTask;
 import searchengine.util.SiteParse;
 
@@ -24,6 +25,8 @@ public class IndexServiceImpl implements IndexService{
     private ForkJoinPool pool;
     @Autowired
     private TransactionsService transactionsService;
+    @Autowired
+    private LemmaService lemmaService;
     private final SitesList sitesFromConfig;
     private final JsoupConnectionConf conf;
 
@@ -39,7 +42,7 @@ public class IndexServiceImpl implements IndexService{
 
         for(SiteConf s : sitesFromConfig.getSites()){
             System.out.println(s.getName() + ",  " + s.getUrl());
-            new SiteParse(s, pool, transactionsService).run();
+            new SiteParse(s, pool, transactionsService, lemmaService).run();
         }
 //        List<Future<Boolean>> futures = new ArrayList<>(sitesFromConfig.getSites().size());
 //        Boolean result = true;
