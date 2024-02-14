@@ -30,14 +30,10 @@ converted to basic form. For example, for nouns - nominative case, singular.</li
 <h2>&#x1F50D; In details</h2>
 <div style="font-size:20px">
 
-<h3>App structure</h3>
+<h3>App structure (currently)</h3>
 
-![database](https://github.com/Nikomankov/Search_engine/blob/master/readme_assets/AppScheme.jpg)
+![database](https://github.com/Nikomankov/Search_engine/blob/master/readme_assets/AppScheme.png)
 
-
-<h4>Diagram of interaction of classes inside the application</h4>
-
-![database](https://github.com/Nikomankov/Search_engine/blob/master/readme_assets/DetailScheme.jpg)
 
 <h3>Data base structure</h3>
 
@@ -47,7 +43,9 @@ converted to basic form. For example, for nouns - nominative case, singular.</li
 
 <i><u>(this block will be added to as development progresses)</u></i>
 <ul>
-<li>Sites for indexing are set in the `application.yaml` file. It looks like this
+<li>
+
+Sites for indexing are set in the `application.yaml` file. It looks like this
 
 ```yaml
 indexing-settings:
