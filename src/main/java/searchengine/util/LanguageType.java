@@ -1,6 +1,6 @@
 package searchengine.util;
 
-public enum Language {
+public enum LanguageType {
     RU,
     ENG
 }

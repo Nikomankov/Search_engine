@@ -2,11 +2,8 @@ package searchengine.util;
 
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.WrongCharaterException;
-import org.apache.lucene.morphology.english.EnglishLuceneMorphology;
-import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.nodes.Document;
 
-import java.io.IOException;
 import java.util.*;
 
 public class Lemmatizator {
@@ -45,9 +42,9 @@ public class Lemmatizator {
 
 
 
-    public Lemmatizator(LanguagesOfLuceneMorphology languages){
-        engLuceneMorphology = languages.getLuceneMorphology(Language.ENG);
-        ruLuceneMorphology = languages.getLuceneMorphology(Language.RU);
+    public Lemmatizator(LuceneMorphologyFactory languages){
+        engLuceneMorphology = languages.getLuceneMorphology(LanguageType.ENG);
+        ruLuceneMorphology = languages.getLuceneMorphology(LanguageType.RU);
         engWords = new ArrayList<>();
         ruWords = new ArrayList<>();
         undefinedWords = new ArrayList<>();
@@ -68,8 +65,8 @@ public class Lemmatizator {
             }
         }
 
-        result = removeAuxPartsOfSpeech(engWords, Language.ENG);
-        result.putAll(removeAuxPartsOfSpeech(ruWords, Language.RU));
+        result = removeAuxPartsOfSpeech(engWords, LanguageType.ENG);
+        result.putAll(removeAuxPartsOfSpeech(ruWords, LanguageType.RU));
         return result;
     }
 
@@ -86,8 +83,8 @@ public class Lemmatizator {
                 undefinedWords.add(w);
             }
         }
-        result = removeAuxPartsOfSpeech(engWords, Language.ENG);
-        result.putAll(removeAuxPartsOfSpeech(ruWords, Language.RU));
+        result = removeAuxPartsOfSpeech(engWords, LanguageType.ENG);
+        result.putAll(removeAuxPartsOfSpeech(ruWords, LanguageType.RU));
         return result;
     }
 
@@ -103,7 +100,7 @@ public class Lemmatizator {
         return text.split(" ");
     }
 
-    private Map<String, Integer> removeAuxPartsOfSpeech(List<String> words, Language language){
+    private Map<String, Integer> removeAuxPartsOfSpeech(List<String> words, LanguageType language){
         Map<String, Integer> result = new HashMap<>(words.size());
         LuceneMorphology luceneMorphology = null;
         String[] auxPartsOfSpeech = null;

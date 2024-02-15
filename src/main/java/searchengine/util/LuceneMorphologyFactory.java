@@ -8,21 +8,21 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class LanguagesOfLuceneMorphology {
+public class LuceneMorphologyFactory {
 
-    private Map<Language, LuceneMorphology> luceneMorphologyMap;
+    private Map<LanguageType, LuceneMorphology> luceneMorphologyMap;
 
-    public LanguagesOfLuceneMorphology(){
+    public LuceneMorphologyFactory(){
         luceneMorphologyMap = new HashMap<>(2);
         try {
-            luceneMorphologyMap.put(Language.RU, new RussianLuceneMorphology());
-            luceneMorphologyMap.put(Language.ENG, new EnglishLuceneMorphology());
+            luceneMorphologyMap.put(LanguageType.RU, new RussianLuceneMorphology());
+            luceneMorphologyMap.put(LanguageType.ENG, new EnglishLuceneMorphology());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public LuceneMorphology getLuceneMorphology(Language language){
+    public LuceneMorphology getLuceneMorphology(LanguageType language){
         return luceneMorphologyMap.get(language);
     }
 

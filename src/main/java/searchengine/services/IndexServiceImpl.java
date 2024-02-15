@@ -9,8 +9,8 @@ import searchengine.config.SitesList;
 import searchengine.dto.index.IndexResponse;
 import searchengine.model.IndexingStatus;
 import searchengine.model.Site;
+import searchengine.repositories.RepositoryFactory;
 import searchengine.repositories.SiteRepository;
-import searchengine.util.LanguagesOfLuceneMorphology;
 import searchengine.util.PageTask;
 import searchengine.util.SiteParse;
 
@@ -24,16 +24,16 @@ public class IndexServiceImpl implements IndexService{
     @Autowired
     private ForkJoinPool pool;
     @Autowired
-    private TransactionsService transactionsService;
+    private SiteRepository siteRepository;
     @Autowired
-    private LemmaService lemmaService;
+    private RepositoryFactory repositoryFactory;
     private final SitesList sitesFromConfig;
     private final JsoupConnectionConf conf;
 
     @Override
     public IndexResponse start() {
 
-        List<Site> sites = transactionsService.findAllSites();
+        List<Site> sites = siteRepository.findAll();
         if(isIndexing(sites)){
             return new IndexResponse(false,"Индексация уже запущена");
         }
@@ -42,7 +42,7 @@ public class IndexServiceImpl implements IndexService{
 
         for(SiteConf s : sitesFromConfig.getSites()){
             System.out.println(s.getName() + ",  " + s.getUrl());
-            new SiteParse(s, pool, transactionsService, lemmaService).run();
+            new SiteParse(s, repositoryFactory, pool).run();
         }
 //        List<Future<Boolean>> futures = new ArrayList<>(sitesFromConfig.getSites().size());
 //        Boolean result = true;
@@ -65,7 +65,7 @@ public class IndexServiceImpl implements IndexService{
 
     @Override
     public IndexResponse stop() {
-        List<Site> sites = transactionsService.findAllSites();
+        List<Site> sites = siteRepository.findAll();
 
         if(!isIndexing(sites)) {
             return new IndexResponse(false);
@@ -82,14 +82,14 @@ public class IndexServiceImpl implements IndexService{
         }
         System.out.println("Shutdown running");
 
-        sites = transactionsService.findAllSites();
+        sites = siteRepository.findAll();
         for (Site site : sites){
             if(site.getStatus() == IndexingStatus.INDEXING) {
                 site.setStatus(IndexingStatus.FAILED);
                 site.setLastError("Принудительное завершение пользователем");
             }
         }
-        transactionsService.saveAllSites(sites);
+        siteRepository.saveAll(sites);
         return new IndexResponse(true);
     }
 
@@ -97,8 +97,6 @@ public class IndexServiceImpl implements IndexService{
     public IndexResponse indexPage(String url) {
         return null;
     }
-
-
 
     private boolean isIndexing(List<Site> sites){
         return sites.stream().anyMatch(s -> s.getStatus() == IndexingStatus.INDEXING);

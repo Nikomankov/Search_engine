@@ -4,55 +4,61 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
-import searchengine.model.IndexM;
-import searchengine.model.Lemma;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.Page;
 import searchengine.model.Site;
-import searchengine.services.LemmaService;
-import searchengine.services.TransactionsService;
+import searchengine.repositories.PageRepository;
+import searchengine.repositories.RepositoryFactory;
+import searchengine.repositories.RepositoryType;
+import searchengine.repositories.SiteRepository;
 
 import java.io.IOException;
+import java.sql.Date;
+import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.ForkJoinTask;
-import java.util.concurrent.RecursiveAction;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RecursiveTask;
 
-public class PageTask extends RecursiveAction {
+public class PageTask extends RecursiveTask<Boolean> {
 
     private static String userAgent;
     private static String referrer;
-
-    private SortedSet<String> globalLinks;
     private final String url;
     private final Site parent;
-    private TransactionsService transactionsService;
+    private SortedSet<String> globalLinks;
+    private RepositoryFactory repositoryFactory;
     private List<PageTask> tasks;
-    private LemmaService lemmaService;
-
+    private SiteRepository siteRepository;
+    private PageRepository pageRepository;
 
     /*
     TODO:
-        -think about how to reduce the number of parameters passed to the class
+        -insert lemmatization
+        -divide the code into methods
      */
 
-    public PageTask(String url, Site parent, TransactionsService transactionsService, SortedSet<String> linksSet, LemmaService lemmaService){
-        this.parent= parent;
-        this.transactionsService = transactionsService;
-        this.globalLinks = linksSet;
+    public PageTask(String url, Site parent, SortedSet<String> linksSet, RepositoryFactory repositoryFactory){
         this.url = url;
+        this.parent = parent;
+        this.globalLinks = linksSet;
+        this.repositoryFactory = repositoryFactory;
         tasks = new ArrayList<>();
-        this.lemmaService = lemmaService;
+
     }
 
     @Override
-    protected void compute() {
+    protected Boolean compute() {
+        getRepos();
         String onlyPath = url.replace(parent.getUrl(), "");
 
-        Page page = transactionsService.findPage(onlyPath);
+        Page page = findPage(onlyPath);
         String errorMessage = null;
 
         //Check in DB
         if(page != null){
-           return;
+           return false;
         }
         Document pageDoc;
         Connection connection = Jsoup.connect(url)
@@ -76,41 +82,40 @@ public class PageTask extends RecursiveAction {
                     .build();
             page.setContent(pageDoc.toString());
 
-            lemmaService.compute(pageDoc, page);
+//            lemmaService.compute(pageDoc, page);
 
             if(statusCode > 399){
                 parent.setLastError(statusCode + " " + statusMessage);
             }
-            if(!transactionsService.updateOrSavePage(page, parent.getId()) &&
-                    transactionsService.updateSite(parent)){
+            if(!updateOrSavePage(page, parent.getId()) && updateSite(parent)){
                 errorMessage = "Transaction failed";
-                return;
+                return false;
             }
 
         } catch (RuntimeException | IOException e) {
             errorMessage = e.getMessage();
             e.printStackTrace();
-            return;
+            return false;
         }
 
 
         findLinks(pageDoc);
-//        logConnectionInfo(page,statusMessage);
 
-//        List<CompletableFuture<Boolean>> futures = tasks.stream()
-//                .map(task -> CompletableFuture.supplyAsync(task::compute))
-//                .toList();
-//
-//
-//
-//        CompletableFuture<Boolean> allTasksResult =
-//                CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).thenApply(
-//                    v -> futures.stream()
-//                            .map(CompletableFuture::join)
-//                            .reduce(true,Boolean::logicalAnd));
-//        System.out.println("Task time is " + new Date() + "\nSite status: " + transactionsService.getSiteStatus(parent));
-//        return allTasksResult.join();
-        tasks.forEach(ForkJoinTask::fork);
+        List<CompletableFuture<Boolean>> futures = tasks.stream()
+                .map(task -> CompletableFuture.supplyAsync(task::compute))
+                .toList();
+        CompletableFuture<Boolean> allTasksResult =
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).thenApply(
+                    v -> futures.stream()
+                            .map(CompletableFuture::join)
+                            .reduce(true,Boolean::logicalAnd));
+        return allTasksResult.join();
+//        tasks.forEach(ForkJoinTask::fork);
+    }
+
+    private void getRepos(){
+        siteRepository = (SiteRepository) repositoryFactory.getRepository(RepositoryType.SITE);
+        pageRepository = (PageRepository) repositoryFactory.getRepository(RepositoryType.PAGE);
     }
 
     public void findLinks(Document pageDoc){
@@ -146,8 +151,46 @@ public class PageTask extends RecursiveAction {
         }
         if(link.matches("^" + parent.getUrl() + ".*$")){ //find url
             globalLinks.add(link);
-            tasks.add(new PageTask(link, parent, transactionsService, globalLinks, lemmaService));
+            tasks.add(new PageTask(link, parent, globalLinks, repositoryFactory));
         }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    private Page findPage(String path) {
+        Page page = null;
+        Optional<Page> optionalPage = pageRepository.findByPath(path);
+        if(optionalPage.isPresent()){
+            page = optionalPage.get();
+        }
+        return page;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW, timeout = 10, rollbackFor = SQLException.class, noRollbackFor = AssertionError.class)
+    public boolean updateOrSavePage(Page page, int siteId) {
+        int retries = 0;
+        while (retries < 5){
+            try{
+                retries++;
+                Optional<Page> optionalPage = pageRepository.findByPath(page.getPath());
+                if(!optionalPage.isPresent()){
+                    pageRepository.save(page);
+                    return true;
+                }
+            } catch(Exception e){
+                StringBuilder builder = new StringBuilder();
+                builder.append(page).append("\n")
+                        .append(Thread.currentThread().getName())
+                        .append("\n").append(e.getMessage());
+                System.out.println(builder);
+            }
+        }
+        return false;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.REPEATABLE_READ)
+    public boolean updateSite(Site site) {
+        siteRepository.updateDate(site.getId(), new Date(System.currentTimeMillis()));
+        return true;
     }
 
 

@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import searchengine.model.IndexM;
 import searchengine.model.Lemma;
 import searchengine.model.Page;
-import searchengine.util.LanguagesOfLuceneMorphology;
+import searchengine.util.LuceneMorphologyFactory;
 import searchengine.util.Lemmatizator;
 
 import java.util.ArrayList;
@@ -17,9 +17,7 @@ import java.util.Map;
 public class LemmaServiceImpl implements LemmaService{
 
     @Autowired
-    private TransactionsService transactionsService;
-    @Autowired
-    LanguagesOfLuceneMorphology languagesOfLuceneMorphology;
+    LuceneMorphologyFactory languagesOfLuceneMorphology;
 
     /*
     TODO:
