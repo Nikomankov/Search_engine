@@ -9,11 +9,10 @@ import searchengine.config.SitesList;
 import searchengine.dto.index.IndexResponse;
 import searchengine.model.IndexingStatus;
 import searchengine.model.Site;
-import searchengine.repositories.RepositoryFactory;
-import searchengine.repositories.SiteRepository;
 import searchengine.util.PageTask;
 import searchengine.util.SiteParse;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 
@@ -21,19 +20,19 @@ import java.util.concurrent.ForkJoinPool;
 @RequiredArgsConstructor
 public class IndexServiceImpl implements IndexService{
 
+    private final List<Thread> threads = new ArrayList<>();
+    private static Thread waitingThread;
     @Autowired
     private ForkJoinPool pool;
     @Autowired
-    private SiteRepository siteRepository;
-    @Autowired
-    private RepositoryFactory repositoryFactory;
+    private TransactionsService transactionsService;
     private final SitesList sitesFromConfig;
     private final JsoupConnectionConf conf;
 
     @Override
     public IndexResponse start() {
 
-        List<Site> sites = siteRepository.findAll();
+        List<Site> sites = transactionsService.findAllSites();
         if(isIndexing(sites)){
             return new IndexResponse(false,"Индексация уже запущена");
         }
@@ -42,30 +41,28 @@ public class IndexServiceImpl implements IndexService{
 
         for(SiteConf s : sitesFromConfig.getSites()){
             System.out.println(s.getName() + ",  " + s.getUrl());
-            new SiteParse(s, repositoryFactory, pool).run();
+            SiteParse siteParse = new SiteParse(s, pool, transactionsService);
+            threads.add(siteParse);
+            siteParse.start();
         }
-//        List<Future<Boolean>> futures = new ArrayList<>(sitesFromConfig.getSites().size());
-//        Boolean result = true;
-//        for(SiteConf s : sitesFromConfig.getSites()){
-//            System.out.println(s.getName() + ",  " + s.getUrl());
-//            futures.add(pool.submit(new SiteParse(s, siteRepository, pool, transactionsService)));
-//        }
-//        for(Future<Boolean> future : futures){
-//            try {
-//                result = result & future.get();
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            } catch (ExecutionException e) {
-//                throw new RuntimeException(e);
-//            }
-//        }
+
+        waitingThread = new Thread(() -> {
+            threads.forEach(t -> {
+                try {
+                    t.join();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        });
+        waitingThread.start();
 
         return new IndexResponse(true);
     }
 
     @Override
     public IndexResponse stop() {
-        List<Site> sites = siteRepository.findAll();
+        List<Site> sites = transactionsService.findAllSites();
 
         if(!isIndexing(sites)) {
             return new IndexResponse(false);
@@ -82,14 +79,14 @@ public class IndexServiceImpl implements IndexService{
         }
         System.out.println("Shutdown running");
 
-        sites = siteRepository.findAll();
+        sites = transactionsService.findAllSites();
         for (Site site : sites){
             if(site.getStatus() == IndexingStatus.INDEXING) {
                 site.setStatus(IndexingStatus.FAILED);
                 site.setLastError("Принудительное завершение пользователем");
             }
         }
-        siteRepository.saveAll(sites);
+        transactionsService.saveAllSites(sites);
         return new IndexResponse(true);
     }
 

@@ -16,4 +16,8 @@ public interface SiteRepository extends JpaRepository<Site, Integer> {
     @Modifying
     @Query(value = "UPDATE Site s SET s.status_time = ?2 WHERE s.id = ?1", nativeQuery = true)
     void updateDate(int id, Date date);
+
+    @Modifying
+    @Query(value = "UPDATE Site s SET s.status_time = ?2, s.status = ?3 WHERE s.id = ?1", nativeQuery = true)
+    void updateDateAndStatus(int id, Date date, String status);
 }
