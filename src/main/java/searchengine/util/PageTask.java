@@ -4,6 +4,8 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import searchengine.model.IndexM;
+import searchengine.model.Lemma;
 import searchengine.model.Page;
 import searchengine.model.Site;
 import searchengine.services.TransactionsService;
@@ -19,6 +21,7 @@ import java.util.concurrent.RecursiveAction;
 public class PageTask extends RecursiveAction {
     private static String userAgent;
     private static String referrer;
+    private static LuceneMorphologyFactory luceneMorphologyFactory;
     private final String url;
     private final Site parent;
     private SortedSet<String> globalLinks;
@@ -54,6 +57,8 @@ public class PageTask extends RecursiveAction {
         if(pageDoc == null){
             return;
         }
+
+        createLemmas(pageDoc);
 
         findLinks(pageDoc);
 
@@ -106,6 +111,31 @@ public class PageTask extends RecursiveAction {
             transactionsService.updateSiteTimeAndStatus(parent);
         }
         return pageDoc;
+    }
+
+    private void createLemmas(Document pageDoc){
+        Lemmatizator lemmatizator = new Lemmatizator(luceneMorphologyFactory);
+        Map<String, Integer> lemmasMap = lemmatizator.compute(pageDoc);
+        List<Lemma> lemmas = new ArrayList<>(lemmasMap.size());
+        for(String key : lemmasMap.keySet()){
+            Lemma lemma = Lemma.builder()
+                    .lemma(key)
+                    .site(page.getSite())
+                    .build();
+            lemmas.add(lemma);
+        }
+        lemmas = transactionsService.saveAllLemmas(lemmas);
+
+        List<IndexM> indexes = new ArrayList<>(lemmas.size());
+        for(Lemma l : lemmas){
+            IndexM index = IndexM.builder()
+                    .page(page)
+                    .lemma(l)
+                    .rank(lemmasMap.get(l.getLemma()))
+                    .build();
+            indexes.add(index);
+        }
+        indexes = transactionsService.saveAllIndexes(indexes);
     }
 
     /**
@@ -163,8 +193,9 @@ public class PageTask extends RecursiveAction {
      * @param userAgent - User agent
      * @param referrer - Referrer
      */
-    public static void setJsoupConf(String userAgent, String referrer){
+    public static void setJsoupConf(String userAgent, String referrer, LuceneMorphologyFactory luceneMorphologyFactory){
         PageTask.userAgent = userAgent;
         PageTask.referrer = referrer;
+        PageTask.luceneMorphologyFactory = luceneMorphologyFactory;
     }
 }
