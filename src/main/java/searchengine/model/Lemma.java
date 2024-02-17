@@ -36,6 +36,10 @@ public class Lemma {
         return (lemma.getLemma().equals(this.lemma) && lemma.site.equals(this.site));
     }
 
+    public void increaseFrequency(){
+        this.frequency = this.frequency + 1;
+    }
+
     @Override
     public int hashCode(){
         int total = 31;

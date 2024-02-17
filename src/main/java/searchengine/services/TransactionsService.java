@@ -1,5 +1,7 @@
 package searchengine.services;
 
+import searchengine.model.IndexM;
+import searchengine.model.Lemma;
 import searchengine.model.Page;
 import searchengine.model.Site;
 
@@ -25,7 +27,12 @@ public interface TransactionsService {
 
 
     //==================== LEMMA ====================
-
+    Optional<Lemma> findLemma(String lemma);
+    Lemma saveLemma(Lemma lemma);
+    List<Lemma> saveAllLemmas(Iterable<Lemma> lemmas);
 
     //==================== INDEX ====================
+    Optional<IndexM> findIndexByPageAndLemma(Page page, Lemma lemma);
+    IndexM saveIndex(IndexM index);
+    List<IndexM> saveAllIndexes(Iterable<IndexM> indexes);
 }

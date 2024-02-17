@@ -9,6 +9,7 @@ import searchengine.config.SitesList;
 import searchengine.dto.index.IndexResponse;
 import searchengine.model.IndexingStatus;
 import searchengine.model.Site;
+import searchengine.util.LuceneMorphologyFactory;
 import searchengine.util.PageTask;
 import searchengine.util.SiteParse;
 
@@ -21,11 +22,12 @@ import java.util.concurrent.ForkJoinPool;
 public class IndexServiceImpl implements IndexService{
 
     private final List<Thread> threads = new ArrayList<>();
-    private static Thread waitingThread;
     @Autowired
     private ForkJoinPool pool;
     @Autowired
     private TransactionsService transactionsService;
+    @Autowired
+    private LuceneMorphologyFactory luceneMorphologyFactory;
     private final SitesList sitesFromConfig;
     private final JsoupConnectionConf conf;
 
@@ -46,7 +48,7 @@ public class IndexServiceImpl implements IndexService{
             siteParse.start();
         }
 
-        waitingThread = new Thread(() -> {
+        new Thread(() -> {
             threads.forEach(t -> {
                 try {
                     t.join();
@@ -54,8 +56,7 @@ public class IndexServiceImpl implements IndexService{
                     throw new RuntimeException(e);
                 }
             });
-        });
-        waitingThread.start();
+        }).start();
 
         return new IndexResponse(true);
     }
@@ -103,7 +104,7 @@ public class IndexServiceImpl implements IndexService{
      * Setting connection parameters for PageTask and creating a new task pool.
      */
     private void setStartingConfig(){
-        PageTask.setJsoupConf(conf.getUserAgent(), conf.getReferrer());
+        PageTask.setJsoupConf(conf.getUserAgent(), conf.getReferrer(), luceneMorphologyFactory);
         if(pool.isShutdown()){
             pool = new ForkJoinPool();
         }

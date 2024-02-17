@@ -5,8 +5,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import searchengine.model.IndexM;
+import searchengine.model.Lemma;
 import searchengine.model.Page;
 import searchengine.model.Site;
+import searchengine.repositories.IndexMRepository;
+import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 
@@ -21,6 +25,10 @@ public class TransactionsServiceImpl implements TransactionsService{
     private SiteRepository siteRepository;
     @Autowired
     private PageRepository pageRepository;
+    @Autowired
+    private LemmaRepository lemmaRepository;
+    @Autowired
+    private IndexMRepository indexRepository;
 
 
     //==================== SITE ====================
@@ -122,11 +130,53 @@ public class TransactionsServiceImpl implements TransactionsService{
 
 
     //==================== LEMMA ====================
+    @Override
+    public Optional<Lemma> findLemma(String lemma) {
+        return lemmaRepository.findByLemma(lemma);
+    }
 
+    @Override
+    public Lemma saveLemma(Lemma lemma) {
+        return lemmaRepository.save(lemma);
+    }
+
+    @Override
+    public List<Lemma> saveAllLemmas(Iterable<Lemma> lemmas) {
+        for(Lemma l : lemmas){
+            Optional<Lemma> optionalLemma = lemmaRepository.findByLemma(l.getLemma());
+            if(optionalLemma.isPresent()){
+                l = optionalLemma.get();
+                l.increaseFrequency();
+                lemmaRepository.save(l);
+            } else {
+                l = lemmaRepository.save(l);
+            }
+        }
+        return (List<Lemma>) lemmas;
+    }
 
 
     //==================== INDEX ====================
+    @Override
+    public Optional<IndexM> findIndexByPageAndLemma(Page page, Lemma lemma) {
+        return indexRepository.findByPageAndLemma(page, lemma);
+    }
 
+    @Override
+    public IndexM saveIndex(IndexM index) {
+        return indexRepository.save(index);
+    }
+
+    @Override
+    public List<IndexM> saveAllIndexes(Iterable<IndexM> indexes) {
+        for (IndexM i : indexes){
+            Optional<IndexM> optionalIndex = indexRepository.findByPageAndLemma(i.getPage(), i.getLemma());
+            if(optionalIndex.isEmpty()){
+                i = indexRepository.save(i);
+            }
+        }
+        return (List<IndexM>) indexes;
+    }
 
 
 
