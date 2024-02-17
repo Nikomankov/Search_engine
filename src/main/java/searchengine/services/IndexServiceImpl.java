@@ -99,6 +99,9 @@ public class IndexServiceImpl implements IndexService{
         return sites.stream().anyMatch(s -> s.getStatus() == IndexingStatus.INDEXING);
     }
 
+    /**
+     * Setting connection parameters for PageTask and creating a new task pool.
+     */
     private void setStartingConfig(){
         PageTask.setJsoupConf(conf.getUserAgent(), conf.getReferrer());
         if(pool.isShutdown()){

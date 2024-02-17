@@ -12,6 +12,10 @@ import java.util.*;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 
+/**
+ * Class for parsing pages with text indexing by lemmas, searching for links on the parent site,
+ * checking them and launching further parsing on them
+ */
 public class PageTask extends RecursiveAction {
     private static String userAgent;
     private static String referrer;
@@ -57,6 +61,13 @@ public class PageTask extends RecursiveAction {
         tasks.forEach(ForkJoinTask::join);
     }
 
+    /**
+     * Connect to page.
+     * Create page.
+     * Write errors text to last_error of the site and update time_status.
+     * Saves the page and updates the site in the repository.
+     * @return - Document of page
+     */
     private Document connectToPage(){
         Document pageDoc;
         String errorMessage = "";
@@ -97,6 +108,11 @@ public class PageTask extends RecursiveAction {
         return pageDoc;
     }
 
+    /**
+     * Find all tags "link" and "a" with active links.
+     * Extract the contents of the "href" attribute and filter.
+     * @param pageDoc - Document of page
+     */
     private void findLinks(Document pageDoc){
         //find all links elements on page
         Elements elements = pageDoc.select("link");
@@ -113,10 +129,20 @@ public class PageTask extends RecursiveAction {
                 .forEach(this::addLink);
     }
 
+    /**
+     * We check if the general set of links of the site contain link and if it does not match the template like "css/site.css", "/favicon.ico", etc. (links to files).
+     * @param link - link found on page
+     * @return - true if it doesn't contain into globalLinks and doesn't math the template
+     */
     private boolean checkInGlobal(String link){
         return !globalLinks.contains(link) && !globalLinks.contains(parent.getUrl() + link) && !link.matches("^.+((\\.\\w{1,4})|(/#.*))$");
     }
 
+    /**
+     * Select link of "/link/" and "link.htm" format and bring them to form "www.site.com/link".
+     * If the resulting link looks like "www.site.com/link" then add to set of global links and create new PageTask.
+     * @param link - link found on page
+     */
     private void addLink(String link){
         if(link.matches("^/?[\\w-/]+(/|\\.htm)?$")){
             if(link.charAt(0) == '/') {
@@ -132,6 +158,11 @@ public class PageTask extends RecursiveAction {
         }
     }
 
+    /**
+     * Set static connection parameters.
+     * @param userAgent - User agent
+     * @param referrer - Referrer
+     */
     public static void setJsoupConf(String userAgent, String referrer){
         PageTask.userAgent = userAgent;
         PageTask.referrer = referrer;

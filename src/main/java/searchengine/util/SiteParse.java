@@ -9,6 +9,10 @@ import java.util.*;
 import java.sql.Date;
 import java.util.concurrent.ForkJoinPool;
 
+/**
+ * Class for running parsing the entire site. Parsing starts from the main page.
+ * Each page contains previously unknown links from the parent site
+ */
 public class SiteParse extends Thread {
     private SortedSet<String> linksSet;
     private final SiteConf siteConf;
@@ -50,6 +54,9 @@ public class SiteParse extends Thread {
         transactionsService.updateSiteTimeAndStatus(site);
     }
 
+    /**
+     * Clear the source url and change it to "https://www.site.com"
+     */
     private void clearUrl(){
         String url = siteConf.getUrl();
         url = url.charAt(url.length()-1) == '/' ? url.substring(0,url.length()-1) : url; //removed "/" at the end

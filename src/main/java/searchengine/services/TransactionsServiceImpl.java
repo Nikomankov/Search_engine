@@ -44,6 +44,10 @@ public class TransactionsServiceImpl implements TransactionsService{
         return siteRepository.saveAll(sites);
     }
 
+    /**
+     * Deleting a site and all pages related to it.
+     * @param url - url of the site
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Override
     public void deleteSiteByUrl(String url) {
@@ -56,12 +60,21 @@ public class TransactionsServiceImpl implements TransactionsService{
         }
     }
 
+    /**
+     * Updating "status_time" of the site to the current one.
+     * @param site - Parent site
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.REPEATABLE_READ)
     @Override
     public void updateSiteTime(Site site) {
         siteRepository.updateDate(site.getId(), new Date(System.currentTimeMillis()));
     }
 
+    /**
+     * Final update of the site.
+     * Update only two fields so as not to overwrite the "last_error" field.
+     * @param site - Parent site
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.REPEATABLE_READ)
     @Override
     public void updateSiteTimeAndStatus(Site site) {
@@ -77,6 +90,13 @@ public class TransactionsServiceImpl implements TransactionsService{
         return pageRepository.findByPath(path);
     }
 
+    /**
+     * Saves the page if it has not yet been created and returns true; if it has already been created, it returns false.
+     * If exceptions occur, it tries again (up to 5 times).
+     * @param page - Current page
+     * @param siteId - parent site id
+     * @return - whether the page was saved
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW, timeout = 10, rollbackFor = SQLException.class, noRollbackFor = AssertionError.class)
     @Override
     public boolean savePage(Page page, int siteId) {
