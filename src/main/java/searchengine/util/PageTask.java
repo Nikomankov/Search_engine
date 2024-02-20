@@ -22,17 +22,17 @@ public class PageTask extends RecursiveAction {
     private static String userAgent;
     private static String referrer;
     private static LuceneMorphologyFactory luceneMorphologyFactory;
+    private SortedSet<String>  globalLinks;
+    private TransactionsService transactionsService;
     private final String url;
     private final Site parent;
-    private SortedSet<String> globalLinks;
-    private TransactionsService transactionsService;
-    private List<PageTask> tasks;
     private String clearPath;
     private Page page;
-
+    Set<String> localLinks;
+    private List<PageTask> tasks;
     /*
     TODO:
-        -insert lemmatization
+        -Add batch save lemmas and indexes to DB
      */
 
     public PageTask(String url, Site parent, SortedSet<String> linksSet, TransactionsService transactionsService){
@@ -40,8 +40,8 @@ public class PageTask extends RecursiveAction {
         this.parent = parent;
         this.globalLinks = linksSet;
         this.transactionsService = transactionsService;
+        localLinks = new TreeSet<>();
         tasks = new ArrayList<>();
-
     }
 
     @Override
@@ -61,8 +61,16 @@ public class PageTask extends RecursiveAction {
         createLemmas(pageDoc);
 
         findLinks(pageDoc);
+        globalLinks.addAll(localLinks);
+        System.out.println("\n" + url);
+        System.out.println("Local links amount: " + localLinks.size());
+        System.out.println("Global links amount: " + globalLinks.size());
+        localLinks.forEach(l -> {
+            PageTask task = new PageTask(l, parent, globalLinks, transactionsService);
+            task.fork();
+            tasks.add(task);
+        });
 
-        tasks.forEach(ForkJoinTask::fork);
         tasks.forEach(ForkJoinTask::join);
     }
 
@@ -77,7 +85,7 @@ public class PageTask extends RecursiveAction {
         Document pageDoc;
         String errorMessage = "";
         Connection connection = Jsoup.connect(url)
-                .timeout(0)
+                .timeout(10000)
                 .userAgent(userAgent)
                 .referrer(referrer)
                 .ignoreHttpErrors(true)
@@ -98,8 +106,8 @@ public class PageTask extends RecursiveAction {
             if(statusCode > 399){
                 errorMessage = statusCode + " " + statusMessage;
             }
-
-            if(!transactionsService.savePage(page, parent.getId())){
+            page = transactionsService.savePage(page);
+            if(page == null){
                 errorMessage = "Transaction failed";
                 return null;
             }
@@ -116,26 +124,27 @@ public class PageTask extends RecursiveAction {
     private void createLemmas(Document pageDoc){
         Lemmatizator lemmatizator = new Lemmatizator(luceneMorphologyFactory);
         Map<String, Integer> lemmasMap = lemmatizator.compute(pageDoc);
-        List<Lemma> lemmas = new ArrayList<>(lemmasMap.size());
-        for(String key : lemmasMap.keySet()){
-            Lemma lemma = Lemma.builder()
-                    .lemma(key)
-                    .site(page.getSite())
-                    .build();
-            lemmas.add(lemma);
-        }
-        lemmas = transactionsService.saveAllLemmas(lemmas);
 
-        List<IndexM> indexes = new ArrayList<>(lemmas.size());
-        for(Lemma l : lemmas){
-            IndexM index = IndexM.builder()
-                    .page(page)
-                    .lemma(l)
-                    .rank(lemmasMap.get(l.getLemma()))
-                    .build();
-            indexes.add(index);
+        try{
+            for(String key : lemmasMap.keySet()){
+                Lemma lemma = Lemma.builder()
+                        .lemma(key)
+                        .frequency(1)
+                        .site(page.getSite())
+                        .build();
+                lemma = transactionsService.saveLemma(lemma);
+
+                IndexM index = IndexM.builder()
+                        .page(page)
+                        .lemma(lemma)
+                        .rank(lemmasMap.get(key))
+                        .build();
+                transactionsService.saveIndex(index);
+            }
+
+        } catch (Exception e){
+            System.out.println(e);
         }
-        indexes = transactionsService.saveAllIndexes(indexes);
     }
 
     /**
@@ -155,37 +164,52 @@ public class PageTask extends RecursiveAction {
         elements.stream()
                 .map(e -> e.attr("href"))
                 .distinct()
-                .filter(this::checkInGlobal)
-                .forEach(this::addLink);
+                .filter(this::notFileLink)
+                .filter(this::notFoundInGlobal)
+                .map(this::getNormalForm)
+                .filter(this::belongToTheParent)
+                .forEach(l -> localLinks.add(l));
     }
 
     /**
-     * We check if the general set of links of the site contain link and if it does not match the template like "css/site.css", "/favicon.ico", etc. (links to files).
+     * Check for it does not match the template like "css/site.css", "/favicon.ico", etc. (links to files).
      * @param link - link found on page
-     * @return - true if it doesn't contain into globalLinks and doesn't math the template
+     * @return true if not match
      */
-    private boolean checkInGlobal(String link){
-        return !globalLinks.contains(link) && !globalLinks.contains(parent.getUrl() + link) && !link.matches("^.+((\\.\\w{1,4})|(/#.*))$");
+    private boolean notFileLink(String link){
+        return !link.matches("^.+((\\.\\w{1,4})|(/#.*))$");
     }
 
     /**
-     * Select link of "/link/" and "link.htm" format and bring them to form "www.site.com/link".
-     * If the resulting link looks like "www.site.com/link" then add to set of global links and create new PageTask.
+     * Select link of "/link/" and "link.htm" format and bring them to form "https://site.com/link".
      * @param link - link found on page
+     * @return updated link
      */
-    private void addLink(String link){
+    private String getNormalForm(String link){
         if(link.matches("^/?[\\w-/]+(/|\\.htm)?$")){
-            if(link.charAt(0) == '/') {
-                link = parent.getUrl() + link;
-            }
-            else {
-                link = url + "/" + link;
-            }
+            link = link.charAt(link.length()-1) == '/' ? link : (link + "/");
+            link = parent.getUrl() + (link.charAt(0) == '/' ? link :  ("/" + link));
         }
-        if(link.matches("^" + parent.getUrl() + ".*$")){
-            globalLinks.add(link);
-            tasks.add(new PageTask(link, parent, globalLinks, transactionsService));
-        }
+        return link;
+    }
+
+    /**
+     *
+     * does the link contain a parent url, like "https://site.com/link"
+     * @param link - link found on page
+     * @return true if belong to the parent site
+     */
+    private boolean belongToTheParent(String link){
+        return link.matches("^" + parent.getUrl() + ".*$");
+    }
+
+    /**
+     * Check if the general set of links of the site contain link
+     * @param link  - link found on page
+     * @return true if not contain
+     */
+    private boolean notFoundInGlobal(String link){
+        return !globalLinks.contains(link) && !globalLinks.contains(parent.getUrl() + link);
     }
 
     /**
@@ -193,7 +217,7 @@ public class PageTask extends RecursiveAction {
      * @param userAgent - User agent
      * @param referrer - Referrer
      */
-    public static void setJsoupConf(String userAgent, String referrer, LuceneMorphologyFactory luceneMorphologyFactory){
+    public static void setConf(String userAgent, String referrer, LuceneMorphologyFactory luceneMorphologyFactory){
         PageTask.userAgent = userAgent;
         PageTask.referrer = referrer;
         PageTask.luceneMorphologyFactory = luceneMorphologyFactory;

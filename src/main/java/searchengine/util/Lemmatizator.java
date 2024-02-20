@@ -10,8 +10,6 @@ public class Lemmatizator {
 
     /*
     TODO:
-        - think about how to make morph.info files loaded once when compiling the program
-        - own tags remover which added space between tags text
         - add log undefined words to file undefinedWords.log like
             "Time: 00:00:00
              Thread: thread name
@@ -95,8 +93,8 @@ public class Lemmatizator {
     private String[] split(String text){
         text = text.replaceAll("[^a-zA-Zа-яА-ЯёЁ\\s]"," ")
                     .replaceAll("[\\s]+"," ")
+                    .replaceAll("[ёЁ]+", "")
                     .toLowerCase();
-        System.out.println(text);
         return text.split(" ");
     }
 

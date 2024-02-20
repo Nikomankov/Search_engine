@@ -18,21 +18,21 @@ public interface TransactionsService {
     void updateSiteTime(Site site);
     void updateSiteTimeAndStatus(Site site);
     List<Site> findAllSites();
-    List<Site> saveAllSites(Iterable<Site> sites);
+    List<Site> saveAllSites(List<Site> sites);
 
 
     //==================== PAGE ====================
     Optional<Page> findPage(String path);
-    boolean savePage(Page page, int siteId);
+    Page savePage(Page page);
 
 
     //==================== LEMMA ====================
-    Optional<Lemma> findLemma(String lemma);
+    Optional<Lemma> findLemma(String lemma, Site site);
     Lemma saveLemma(Lemma lemma);
-    List<Lemma> saveAllLemmas(Iterable<Lemma> lemmas);
+    List<Lemma> saveAllLemmas(List<Lemma> lemmas);
 
     //==================== INDEX ====================
     Optional<IndexM> findIndexByPageAndLemma(Page page, Lemma lemma);
     IndexM saveIndex(IndexM index);
-    List<IndexM> saveAllIndexes(Iterable<IndexM> indexes);
+    List<IndexM> saveAllIndexes(List<IndexM> indexes);
 }

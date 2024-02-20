@@ -19,11 +19,11 @@ public class IndexM {
     @Column(nullable = false)
     private int id;
 
-    @ManyToOne(cascade = CascadeType.REMOVE)
+    @ManyToOne(cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
     @JoinColumn(name = "page_id", nullable = false)
     private Page page;
 
-    @ManyToOne(cascade = CascadeType.REMOVE)
+    @ManyToOne(cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
     @JoinColumn(name = "lemma_id", nullable = false)
     private Lemma lemma;
 
@@ -50,10 +50,10 @@ public class IndexM {
 
     @Override
     public String toString(){
-        return new StringBuilder("\nLemma")
+        return new StringBuilder("\nIndex")
                 .append("\n\tID --- ").append(id)
                 .append("\n\tPage - ").append(page.getPath())
-                .append("\n\tLemma - ").append(lemma)
+                .append("\n\tLemma - ").append(lemma.getLemma())
                 .append("\n\tRank - ").append(rank)
                 .toString();
     }

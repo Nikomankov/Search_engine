@@ -7,6 +7,7 @@ import searchengine.model.Site;
 import searchengine.services.TransactionsService;
 import java.util.*;
 import java.sql.Date;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ForkJoinPool;
 
 /**
@@ -44,6 +45,7 @@ public class SiteParse extends Thread {
         site.setId(id);
 
         Site cloneSite = (Site) site.clone();
+        System.out.println("URL: " + cloneSite.getUrl());
         PageTask task = new PageTask(cloneSite.getUrl(), cloneSite, linksSet, transactionsService);
         pool.invoke(task);
 
@@ -52,6 +54,7 @@ public class SiteParse extends Thread {
         site.setStatusTime(new Date(System.currentTimeMillis()));
         site.setStatus(IndexingStatus.INDEXED);
         transactionsService.updateSiteTimeAndStatus(site);
+        log(end);
     }
 
     /**
@@ -60,6 +63,21 @@ public class SiteParse extends Thread {
     private void clearUrl(){
         String url = siteConf.getUrl();
         url = url.charAt(url.length()-1) == '/' ? url.substring(0,url.length()-1) : url; //removed "/" at the end
+        url = url.replaceFirst("www\\.?", "");
         siteConf.setUrl(url);
+    }
+
+    private void log(long time){
+        int hour = (int)((int)time/(3.6*Math.pow(10,6)));
+        int min = (int)time / 60000;
+        int sec = (int)(time % 60000) / 1000;
+        StringBuilder log = new StringBuilder("TASK JOIN!");
+        log.append("\n\tRuntime = ")
+                .append(hour > 0 ? (hour + "h ") : "")
+                .append(min > 0 ? (min + "min ") : "")
+                .append(sec > 0 ? (sec + "sec ") : "")
+                .append(time % 1000).append("msc")
+                .append("\nGlobal links amount: ").append(linksSet.size());
+        System.out.println(log);
     }
 }

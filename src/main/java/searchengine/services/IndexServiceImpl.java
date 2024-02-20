@@ -104,7 +104,7 @@ public class IndexServiceImpl implements IndexService{
      * Setting connection parameters for PageTask and creating a new task pool.
      */
     private void setStartingConfig(){
-        PageTask.setJsoupConf(conf.getUserAgent(), conf.getReferrer(), luceneMorphologyFactory);
+        PageTask.setConf(conf.getUserAgent(), conf.getReferrer(), luceneMorphologyFactory);
         if(pool.isShutdown()){
             pool = new ForkJoinPool();
         }
